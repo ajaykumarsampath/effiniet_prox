@@ -60,11 +60,7 @@ sys_actual=system_prox_formation(S,P,Tree,ops_sys);
 sys_actual_mod=system_prox_formation_modified(S,P,Tree,ops_sys);
 ops_sys.cell=1;
 ops_sys_poly=0;
-%{
-ops_sys_dst.gamma_min=1e6;
-ops_sys_dst.gamma_xs=1e6;
-ops_sys_dst.gamma_max=1e6;
-%}
+
 sys_NN=system_prox_formation(S,P,Tree,ops_sys);
 
 ops_sys.normalise=1;
@@ -168,81 +164,6 @@ opts_apg.lambda=8e-5;
 
 [Z_NN,details_apg_NN]=APG_effiniet_2(sys_NN,Ptree_NN,Tree,V,opts_apg);
 
-%%
-%{
-Ptree=factor_apg_effiniet(sys,V,Tree);
-opts_apg.state=current_state_opt;
-
-opts_apg.x=forbes_opts.x;
-opts_apg.primal_inf=0.01;
-opts_apg.dual_inf=0.01;
-opts_apg.E=S.E;
-opts_apg.Ed=S.Ed;
-
-opts_apg.steps=1500;
-opts_apg.lambda=18e-4;
-
-[Z_N,details_apg]=APG_effiniet_2(sys,Ptree,Tree,V,opts_apg);
-%%
-%
-[DH_normalized_not,dts_not_normalized]=dual_hessian_calculate(sys_NN,Tree,V,apg_opts);
-[DH_normalized,dts_normalized]=dual_hessian_calculate(sys,Tree,V,apg_opts);
-[DH_mod,dts_mod]=dual_hessian_calculate(sys_mod,Tree,V_mod,apg_opts_mod);
-% sys_new=sys;
-sys_prcnd=precondition_calculate(sys,DH_normalized,Tree);
-[DH_normalized_new,dts_normalized_new]=dual_hessian_calculate(sys_prcnd,Tree,V,apg_opts);
-
-%%
-
-
-% Factor step calculation
-Ptree=factor_apg_effiniet(sys,V,Tree);
-Ptree_prcnd=factor_apg_effiniet(sys_prcnd,V,Tree);
-
-Ptree_mod=factor_apg_effiniet(sys_mod,V_mod,Tree);
-% Factor step calculation
-Ptree_null=factor_apg_effiniet_null(sys_null,V,Tree);
-
-
-
-
-%%
-
-V_mod.alpha=(kron(ones(P.Hp,1),P.alpha1([1:3 5:6])')+P.alpha2(kk:kk+P.Hu,[1:3 5:6]));
-prev_vhat=3600*sys_mod.L1*DemandData(kk-1,:)';
-
-par_sol_opt.prev_vhat=prev_vhat;
-current_state_opt_mod=calcul_parti_soul(sys_mod,Tree,V_mod,par_sol_opt);
-current_state_opt_mod.v=3600*[0.0656 0.0849 0.0934]';
-opts_apg_mod.state=current_state_opt_mod;
-
-opts_apg_mod.x=0.1*(S.xmax-P.xs)+P.xs;
-opts_apg_mod.primal_inf=0.01;
-opts_apg_mod.dual_inf=0.01;
-opts_apg_mod.E=S.E;
-opts_apg_mod.Ed=S.Ed;
-%%
-opts_apg.steps=4000;
-opts_apg.lambda=18e-4;
-
-[Z,details_apg]=APG_effiniet_2(sys,Ptree,Tree,V,opts_apg);
-
-opts_apg.lambda=18e-6;
-[Z_prcnd,details_apg_prcnd]=APG_effiniet_2(sys_prcnd,Ptree_prcnd,Tree,V,opts_apg);
-
-opts_apg.steps=4000;
-opts_apg.lambda=10e-6;
-%[Z,details_apg]=APG_effiniet_2(sys_dst_bf_prcnd,Ptree,Tree,V,opts_apg);
-[Z_NN,details_apg_NN]=APG_effiniet_2(sys_NN,Ptree_NN,Tree,V,opts_apg);
-%%
-opts_apg.steps=8000;
-opts_apg.lambda=18e-6;
-[Z_null,details_apg_null]=APG_effiniet_null(sys_null,Ptree_null,Tree,V,opts_apg);
-%%
-opts_apg_mod.steps=8000;
-opts_apg_mod.lambda=18e-4*5;
-[Z_mod,details_apg_mod]=APG_effiniet_2(sys_mod,Ptree_mod,Tree,V_mod,opts_apg_mod);
-%}
 %%
 opts_apg.state=current_state_opt;
 opts_apg.x=forbes_opts.x;
