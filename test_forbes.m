@@ -59,7 +59,7 @@ sys_actual_mod=system_prox_formation_modified(S,P,Tree,ops_sys);
 ops_sys.cell=1;
 ops_sys_poly=0;
 
-sys_NN=system_prox_formation(S,P,Tree,ops_sys);
+[sys_NN,V]=system_prox_formation(S,P,Tree,ops_sys);
 
 ops_sys.normalise=1;
 
