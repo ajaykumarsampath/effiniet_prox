@@ -47,10 +47,8 @@ tree_ops.Wfiltering = 0; % 1/0 do/don't filter disturbance W by system dynamics 
 old_tree{1}.value=kron(ele',old_tree{1}.value);
 old_tree=old_tree{1};
 [Tree,new_tree_details]=Tranform_tree(old_tree);
-%% APG algorithm 
+%% 
 % transform the effiniet into proximal algorithm 
-
-%
 ops_sys.gamma_min=inf;
 ops_sys.gamma_xs=inf;
 ops_sys.gamma_max=inf;
@@ -83,10 +81,7 @@ apg_opts_mod.E=S.E(:,[1:3 5:6]);
 apg_opts_mod.Ed=S.Ed;
 
 [sys_null,V_null]=system_prox_formation_null(S,P,Tree,ops_sys);
-%V.Wu=10*V.Wu;
-%V.Wu(5,5)=1000;
-%V.Wu(4,4)=1000;
-%% 
+%% Calculate the particular solutions 
 par_sol_opt.demand=3600*DemandData(kk:kk+P.Hu,:);
 prev_vhat=3600*sys_NN.L1*DemandData(kk-1,:)';
 
@@ -96,8 +91,7 @@ V.alpha=(kron(ones(P.Hp,1),P.alpha1')+P.alpha2(kk:kk+P.Hu,:));
 current_state_opt=calcul_parti_soul(sys_NN,Tree,V,par_sol_opt);
 current_state_opt.v=3600*[0.0656 0.00 0.0849 0.0934]';
 
-opts.state=current_state_opt;
-
+%% Forbes algorithms 
 forbes_opts.x=0.1*(S.xmax-P.xs)+P.xs;
 forbes_opts.primal_inf=0.01;
 forbes_opts.dual_inf=0.01;
@@ -106,7 +100,7 @@ forbes_opts.Ed=S.Ed;
 forbes_opts.w=current_state_opt.w;
 forbes_opts.demand=current_state_opt.demand;
 forbes_opts.uprev=sys.L*current_state_opt.v+prev_vhat;
-%%
+
 clear opt;
 prob=formulate_forbes(sys_NN,V,Tree,forbes_opts);
 
@@ -148,7 +142,7 @@ for i=1:size(Tree.stage,1)
     Z.U1(:,i)=out.x1((i-1)*nz+1:(i-1)*nz+sys.nu,1);
     Z.X1(:,i+1)=out.x1((i-1)*nz+sys.nu+1:i*nz,1);
 end
-%%
+%% APG algorithm 
 %sys=sys_NN;
 Ptree_NN=factor_apg_effiniet(sys_NN,V,Tree);
 opts_apg.state=current_state_opt;
@@ -164,7 +158,7 @@ opts_apg.lambda=8e-5;
 
 [Z_NN,details_apg_NN]=APG_effiniet_2(sys_NN,Ptree_NN,Tree,V,opts_apg);
 
-%%
+%% Gurobi Algorithm 
 opts_apg.state=current_state_opt;
 opts_apg.x=forbes_opts.x;
 apg_opts.u=sys.L*opts_apg.state.v+opts_apg.state.prev_vhat;
