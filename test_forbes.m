@@ -62,11 +62,8 @@ ops_sys_poly=0;
 sys_NN=system_prox_formation(S,P,Tree,ops_sys);
 
 ops_sys.normalise=1;
-%sys=sys_old;out.x1(())
-sys=system_prox_formation(S,P,Tree,ops_sys);
-[sys_mod,V_mod]=system_prox_formation_modified(S,P,Tree,ops_sys);
 
-[sys_box,V]=system_prox_formation_box(S,P,Tree,ops_sys);
+sys=system_prox_formation(S,P,Tree,ops_sys);
 
 ops_sys.cell=0;
 ops_sys.normalise=0;
@@ -173,19 +170,6 @@ tic
 toc
 Z.eff_X=result{1,1};
 Z.eff_U=result{1,2};
-
-%%
-%{
-apg_opts_mod.u=sys_mod.L*opts_apg_mod.state.v+opts_apg_mod.state.prev_vhat;
-apg_opts_mod.x=opts_apg.x;
-apg_opts_mod.demand=opts_apg.state.demand;
-effiniet_apg_mod=effiniet_yalmip(sys_actual_mod,Tree,V_mod,apg_opts_mod);
-tic
-[result_mod,error]=effiniet_apg_mod{{apg_opts_mod.x,apg_opts_mod.u}};
-toc
-Z_mod.eff_X=result_mod{1,1};
-Z_mod.eff_U=result_mod{1,2};
-%}
 %%
 figure
 for i=1:sys.nx
