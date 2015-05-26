@@ -1,5 +1,14 @@
 function [ prob ] = formulate_forbes( sys,V,Tree,forbes_opts )
-% This function formulates  problem for forbes 
+% This function formulates  problem to give for forbes options 
+%
+%
+% INPUT -----   sys    :
+%               V      :
+%               Tree   :
+%        forbes_opts   :
+%
+% OUTPUT-----   prob   :
+
 
 %%
 nx=sys.nx;
@@ -15,7 +24,7 @@ Bbar=zeros(Nd*(nx+ne),nu+Ns*nx+nz*(Nd-Ns));
 bbar=zeros(Nd*(nx+ne),1);
 
 H=zeros(nz*Nd);
-%A=zeros(2*nz+(Nd-Ns)*ny,nz*Nd);
+A=zeros(nz+(Nd-Ns)*nz,nz*Nd);
 q=zeros(nz*Nd,1);
 
 lb=zeros(Nd*nz,1);
@@ -70,18 +79,47 @@ for i=1:Nd+1
         lb(1:nu,1)=sys.umin(1:nu,1);
         ub(1:nu,1)=sys.umax(1:nu,1);
     elseif(i==Nd+1)
-        lb((Nd-1)*nz+nu+1:Nd*nz,1)=sys.xmin(1:nx,1);
-        ub((Nd-1)*nz+nu+1:Nd*nz,1)=sys.xmax(1:nx,1);
+        lb((Nd-1)*nz+nu+1:Nd*nz,1)=sys.xmin(Nd*nx+1:(Nd+1)*nx,1);
+        ub((Nd-1)*nz+nu+1:Nd*nz,1)=sys.xmax(Nd*nx+1:(Nd+1)*nx,1);
     else
-        lb((i-2)*nz+nu+1:(i-1)*nz+nu,1)=[sys.xmin(1:nx,1);sys.umin(1:nu,1)];
-        ub((i-2)*nz+nu+1:(i-1)*nz+nu,1)=[sys.xmax(1:nx,1);sys.umax(1:nu,1)];
+        lb((i-2)*nz+nu+1:(i-1)*nz+nu,1)=[sys.xmin((i-1)*nx+1:i*nx,1)...
+            ;sys.umin((i-1)*nu+1:i*nu,1)];
+        ub((i-2)*nz+nu+1:(i-1)*nz+nu,1)=[sys.xmax((i-1)*nx+1:i*nx,1)...
+            ;sys.umax((i-1)*nu+1:i*nu,1)];
     end
 end
+
+if(sys.cell)
+    for i=1:Nd+1
+        if(i==1)
+            A(1:nu,1:nu)=sys.G{i}(2*nx+1:2*nx+nu,:);
+        elseif(i==Nd+1)
+            A(nu+(i-2)*nz+1:nz+(i-2)*nz,nu+(i-2)*nz+1:(i-1)*nz)=...
+                sys.F{i}(1:nx,:);
+        else
+            A(nu+(i-2)*nz+1:nu+(i-1)*nz,nu+(i-2)*nz+1:nu+(i-1)*nz)=...
+                [sys.F{i}([1:nx,2*nx+1:2*nx+nu],:) sys.G{i}([1:nx,2*nx+1:2*nx+nu],:)];
+        end
+    end
+else
+    for i=1:Nd+1
+        if(i==1)
+            A(1:2*nu,1:nu)=sys.G(2*nx+1:2*nz,:);
+        elseif(i==Nd+1)
+            A(2*nu+(i-2)*ny+1:2*nz+(i-2)*ny,nu+(i-2)*nz+1:(i-1)*nz)=...
+                sys.F(1:2*nx,:);
+        else
+            A(2*nu+(i-2)*ny+1:2*nu+(i-1)*ny,nu+(i-2)*nz+1:nu+(i-1)*nz)=...
+                [sys.F sys.G];
+        end
+    end
+end
+
 prob.f1=quad_over_affine(H,q,Bbar,bbar);
 
 prob.g=indBox(lb,ub);
 
-prob.A1 = 1;
+prob.A1 = A;
 prob.B = -1;
 prob.b = zeros(nz*(Nd),1);
 

@@ -1,9 +1,14 @@
 function [ sys_new ] = precondition_calculate( sys,DualHessian,Tree)
 
 % Precondition_calculate calcuate the diagonal preconditioning
-% of the system.
-
-%DualHessian=DH_normalized;
+% of the system. 
+% INPUT -----      sys    : 
+%          DualHessian    :
+%                 Tree    :
+%
+% OUTPUT -----   sys_new  :
+%%
+% DualHessian=DH_normalized_not;
 
 nx=size(sys.A,1);
 nu=size(sys.B,2);
@@ -46,10 +51,10 @@ if(sys.cell)
             sys_new.G{j,1}(2*sys.nx+1:end,:)=DH_diag((j-1)*ny+1:(j-1)*ny+2*nu,(j-1)*ny+1:(j-1)*ny+2*nu)...
                 *sys.G{j,1}(2*sys.nx+1:end,:);
             
-            sys_new.xmax((j-2)*nx+1:(j-1)*nx,1)=DH_diag((j-2)*ny+2*nu+1:(j-2)*ny+2*nu+nx,...
-                (j-2)*ny+2*nu+1:(j-2)*ny+2*nu+nx)*sys.xmax((j-2)*nx+1:(j-1)*nx,1);
-            sys_new.xmin((j-2)*nx+1:(j-1)*nx,1)=DH_diag((j-2)*ny+2*nu+nx+1:(j-1)*ny,...
-                (j-2)*ny+2*nu+nx+1:(j-1)*ny)*sys.xmin((j-2)*nx+1:(j-1)*nx,1);
+            sys_new.xmax((j-1)*nx+1:j*nx,1)=DH_diag((j-2)*ny+2*nu+1:(j-2)*ny+2*nu+nx,...
+                (j-2)*ny+2*nu+1:(j-2)*ny+2*nu+nx)*sys.xmax((j-1)*nx+1:j*nx,1);
+            sys_new.xmin((j-1)*nx+1:j*nx,1)=DH_diag((j-2)*ny+2*nu+nx+1:(j-1)*ny,...
+                (j-2)*ny+2*nu+nx+1:(j-1)*ny)*sys.xmin((j-1)*nx+1:j*nx,1);
             
             sys_new.umax((j-1)*nu+1:j*nu,1)=DH_diag((j-1)*ny+1:(j-1)*ny+nu,...
                 (j-1)*ny+1:(j-1)*ny+nu)*sys.umax((j-1)*nu+1:j*nu,1);

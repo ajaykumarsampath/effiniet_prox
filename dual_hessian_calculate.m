@@ -1,7 +1,14 @@
 function [ Dual_hessian,details] = dual_hessian_calculate( sys,Tree,V,apg_opts)
 % This function calculate the dual hessian for the effiniet problem
 %
-% INPUT---- sys
+% INPUT ----    sys      :
+%               Tree     :
+%               V        :
+%               apg_opts :
+%
+% OUTPUT -----  Dual_hessian :
+%               details      :
+
 %%
 nx=sys.nx;
 nu=sys.nu;

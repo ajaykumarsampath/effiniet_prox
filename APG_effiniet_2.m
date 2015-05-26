@@ -43,6 +43,10 @@ opts_prox.gamma_c=sys.gamma_max;
 opts_prox.gamma_s=sys.gamma_xs;
 
 uprev=sys.L*opts.state.v+opts.state.prev_vhat;
+
+prm_feas.x=zeros(2*sys.nx,Nd);
+prm_feas.u=zeros(2*sys.nu,Nd-Ns+1);
+
 %g1=[sys.xmax(1:sys.nx);-sys.xmin(1:sys.nx);sys.umax(1:sys.nu);sys.umin(1:sys.nu)];
 %{
 grad_opts.u=uprev;
@@ -57,8 +61,6 @@ dual_grad_yalmip=dual_gradient_yalmip(sys,Tree,V,grad_opts);
 %}
 %%
 %tic
-%opts.steps=8000;
-%opts.lambda=1e-3;
 j=1;
 jobj=zeros(1,opts.steps-1);
 while(j<opts.steps)
@@ -71,7 +73,7 @@ while(j<opts.steps)
     
     %step 2: argmin of the lagrangian using dynamic programming
     %}
-    [Z,details_apg]=solve_apg_effiniet(sys,Tree,Ptree,W,opts.x,opts.state);
+    Z=solve_apg_effiniet(sys,Tree,Ptree,W,opts.x,opts.state);
     
     %
     %results=dual_grad_yalmip{{grad_opts.x,grad_opts.u,W.y,W.yt}};
@@ -108,23 +110,23 @@ while(j<opts.steps)
     Y.y0=Y.y1;
     Y.yt0=Y.yt1;
     
-    %dual_grad(1:sys.nu,:)=Z.U;
-    %dual_grad(sys.nu+1:end,1:Nd-1)=Z.X(:,2:Nd);
-    %prm_fes.soft(1:sys.nx,1:Nd+Ns-1)=(Z.X(:,2:Nd+Ns)-t.x(:,1:Nd+1-Ns));
-    %prm_fes.hard=(Z.U-t.u);
-    %}
+    
     if(sys.cell)      
         for i=1:Nd+1
             if(i==1)
-               Y.y1(2*sys.nx+1:end,i)=W.y(2*sys.nx+1:end,i)+opts.lambda*...
+                prm_feas.u(:,1)=(sys.G{i,1}(2*sys.nx+1:end,:)*Z.U(:,i)-t.u(:,i));
+                Y.y1(2*sys.nx+1:end,i)=W.y(2*sys.nx+1:end,i)+opts.lambda*...
                    (sys.G{i,1}(2*sys.nx+1:end,:)*Z.U(:,i)-t.u(:,i));
             elseif(i==Nd+1)
                 Y.yt1=W.yt+opts.lambda*(sys.F{i,1}(1:2*sys.nx,:)*Z.X(:,Nd+1:Nd+Ns)-t.x(:,Nd-Ns+1:Nd+Ns-1));
+                prm_feas.x(:,i-1)=sys.F{i,1}(1:2*sys.nx,:)*Z.X(:,Nd+1:Nd+Ns)-t.x(:,Nd-Ns+1:Nd+Ns-1);
             else
                 Y.y1(1:2*sys.nx,i)=W.y(1:2*sys.nx,i)+opts.lambda*...
                     (sys.F{i,1}(1:2*sys.nx,:)*Z.X(:,i)-t.x(:,i-1));
                 Y.y1(2*sys.nx+1:end,i)=W.y(2*sys.nx+1:end,i)...
                     +opts.lambda*(sys.G{i,1}(2*sys.nx+1:end,:)*Z.U(:,i)-t.u(:,i));
+                prm_feas.x(:,i-1)=sys.F{i,1}(1:2*sys.nx,:)*Z.X(:,i)-t.x(:,i-1);
+                prm_feas.u(:,i)=sys.G{i,1}(2*sys.nx+1:end,:)*Z.U(:,i)-t.u(:,i);
             end
         end
     else
@@ -178,6 +180,7 @@ plot(jobj);
 details.gpad_solve=toc;
 details.W=W;
 details.jobj=jobj;
+details.prm_feas=prm_feas;
 %details.epsilon_prm_avg= epsilon_prm_avg;
 %details.epsilon_prm=epsilon_prm;
 end
