@@ -3,7 +3,6 @@ function [ zoptimiser ] = dual_gradient_yalmip_null( sys,Tree,Ptree,V,opts)
 % Generate the yalmip optimizer for dual gradient calculation 
 
 % opts=grad_opts_null;
-default_options=sdpsettings('solver','gurobi','verbose',0,'cachesolvers',1);
 
 Nd=size(Tree.stage,1);
 Ns=size(Tree.leaves,1);
@@ -36,6 +35,23 @@ for i=1:Nd-Ns+1
         const=const+(U(:,1)==sys.L*v(:,1)+opts.vhat(:,1));
         const=const+(X(:,2)==sys.A*X(:,1)+sys.B*U(:,1)+opts.w(:,1));
     else
+                stage=Tree.stage(i-1)+1;
+        Jobj=Jobj+Tree.prob(i-1,1)*(opts.alpha_bar(:,stage+1)'*v(:,i)+...
+            (v(:,i)-v(:,Tree.ancestor(i-1)+1))'*Wv*(v(:,i)-v(:,Tree.ancestor(i-1)+1)))...
+            +2*(vhat(:,i)-vhat(:,Tree.ancestor(i-1)+1))'*Wv1*(v(:,i)-v(:,Tree.ancestor(i-1)+1))...
+            +Y(:,i)'*(sys.F{i,1}*X(:,i)+Ptree.Gbar{i,1}*v(:,i));
+        
+        nchild=Tree.children{i-1};
+        
+        for l=1:length(nchild)
+            %const=const+(X(:,nchild(l)+1)==sys.A*X(:,i)+Ptree.Bbar*v(:,i)+opts.w(:,nchild(l)));
+            const=const+(U(:,i)==sys.L*v(:,i)+opts.vhat(:,nchild(l)));
+            const=const+(X(:,nchild(l)+1)==sys.A*X(:,i)+sys.B*U(:,i)+...
+                opts.w(:,nchild(l)));
+            %sys.Gd*(opts.demand(stage+1,:)+Tree.value(nchild(l),:))')...
+                %+opts.w(:,nchild(l)));
+        end
+        
         stage=Tree.stage(i-1)+1;
         Jobj=Jobj+Tree.prob(i-1,1)*(opts.alpha_bar(:,stage+1)'*v(:,i)+...
             (v(:,i)-v(:,Tree.ancestor(i-1)+1))'*Wv*(v(:,i)-v(:,Tree.ancestor(i-1)+1)))...

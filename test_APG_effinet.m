@@ -54,11 +54,7 @@ old_tree=old_tree{1};
 ops_sys_dst.gamma_min=inf;
 ops_sys_dst.gamma_xs=inf;
 ops_sys_dst.gamma_max=inf;
-%{
-ops_sys_dst.gamma_min=1e6;
-ops_sys_dst.gamma_xs=1e6;
-ops_sys_dst.gamma_max=1e6;
-%}
+
 [sys_dst_bf_prcnd,V]=system_prox_formation(S,P,ops_sys_dst);
 
 sys=sys_dst_bf_prcnd;

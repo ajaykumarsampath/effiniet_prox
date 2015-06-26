@@ -1,4 +1,4 @@
-function [ cur_opt] = calcul_parti_soul( sys,Tree,V,current_opts)
+function [ cur_opt] = calParSol_modified( sys,Tree,V,current_opts)
 
 % This function calcualte the particular soultion 
 % for the equation Eu+E_d d=0 given by 
@@ -7,8 +7,10 @@ function [ cur_opt] = calcul_parti_soul( sys,Tree,V,current_opts)
 %               Tree  :  Tree structure 
 %     current_demand  :  Current demand estimated
 %            inv_hat  :  Previous_vhat;  
-% Output---- cur_opt  :  
+% Output---- cur_opt  :
+%
 % current_opts=par_sol_opt;
+
 Nd=size(Tree.stage,1);
 nu=size(sys.L1,1);
 nv=size(sys.L,2);
@@ -33,15 +35,19 @@ for k=1:sys.Np
         vhat(:,nodes_stage(j))=sys.L1*(current_demand(k,:)'...
            +Tree.value(nodes_stage(j),:)');
     end
-end
+end 
+
 
 for k=1:sys.Np
     nodes_stage=find(Tree.stage==k-1);
     if(k==1)
         zeta(:,nodes_stage)=(vhat(:,nodes_stage)-prev_vhat);
-        zeta(:,nodes_stage)=-(vhat(:,2)-vhat(:,nodes_stage))...
-            +zeta(:,nodes_stage);
-        beta(:,nodes_stage)=2*(zeta(:,nodes_stage)'*Wv1)';
+        nchild=Tree.children{nodes_stage};
+        for l=1:length(nchild)
+            zeta(:,nodes_stage)=zeta(:,nodes_stage)-Tree.prob(nchild(l))*...
+                (vhat(:,nchild(l))-vhat(:,nodes_stage));
+        end
+        beta(:,nodes_stage)=alpha_bar(:,1)+2*(zeta(:,nodes_stage)'*Wv1)';
     else
         for j=1:length(nodes_stage)
             zeta(:,nodes_stage(j))=Tree.prob(nodes_stage(j))*(vhat(:,nodes_stage(j))...
@@ -49,11 +55,12 @@ for k=1:sys.Np
             if(k<sys.Np)
                 nchild=Tree.children{nodes_stage(j)};
                 for l=1:length(nchild)
-                    zeta(:,nodes_stage(j))=Tree.prob(nchild(l))*(vhat(:,nchild(l))-...
-                        vhat(:,nodes_stage(j)))+zeta(:,nodes_stage(j));
+                    zeta(:,nodes_stage(j))=zeta(:,nodes_stage(j))-...
+                        Tree.prob(nchild(l))*(vhat(:,nchild(l))-vhat(:,nodes_stage(j)));
                 end
             end
-            beta(:,nodes_stage(j))=2*(zeta(:,nodes_stage(j))'*Wv1)';
+            beta(:,nodes_stage(j))=Tree.prob(nodes_stage(j))*alpha_bar(:,k)+...
+                2*(zeta(:,nodes_stage(j))'*Wv1)';
         end
     end
 end
@@ -65,4 +72,5 @@ cur_opt.alpha_bar=alpha_bar;
 cur_opt.w=w;
 
 end
+
 

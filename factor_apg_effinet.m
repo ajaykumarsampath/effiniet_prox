@@ -1,4 +1,4 @@
-function [ Ptree] = factor_apg_effiniet( sys,V,Tree)
+function [ Ptree] = factor_apg_effinet( sys,V,Tree)
 
 % This function calculate the matrices factor step of the effiniet
 % cost function.

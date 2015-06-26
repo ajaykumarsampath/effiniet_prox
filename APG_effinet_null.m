@@ -74,7 +74,7 @@ while(j<opts.steps)
     
     %step 2: argmin of the lagrangian using dynamic programming
     %}
-    Z_null=solve_apg_effiniet_null(sys_null,Tree,Ptree_null,W,opts.x,opts.state);
+    Z_null=solve_apg_effinet_null(sys_null,Tree,Ptree_null,W,opts.x,opts.state);
     
     for i=1:Nd-Ns+1
         if(i==1)

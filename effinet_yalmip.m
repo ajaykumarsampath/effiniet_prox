@@ -1,4 +1,4 @@
-function [ zoptimiser ] = effiniet_yalmip( sys,Tree,V,opts)
+function [ zoptimiser ] = effinet_yalmip( sys,Tree,V,opts)
 %  
 % Generate the yalmip optimizer for dual gradient calculation 
 
@@ -30,13 +30,14 @@ for i=1:Nd-Ns+1
             (U(:,i)-U(:,Tree.ancestor(i-1)+1)));
         const=const+(sys.umin((i-1)*sys.nu+1:i*sys.nu,1)<=U(:,i)<=sys.umax((i-1)*sys.nu+1:i*sys.nu,1));
         const=const+(sys.xmin((i-1)*sys.nx+1:i*sys.nx,1)<=X(:,i)<=sys.xmax((i-1)*sys.nx+1:i*sys.nx,1));
+        const=const+(opts.E*U(:,i)+opts.Ed*(opts.demand(stage+1,:)+Tree.value(i,:))'==0);
         
         nchild=Tree.children{i-1};
         for l=1:length(nchild)
             const=const+(X(:,nchild(l)+1)==sys.A*X(:,i)+sys.B*U(:,i)+sys.Gd*...
                 (opts.demand(stage+1,:)+Tree.value(nchild(l),:))');
-            const=const+(opts.E*U(:,i)+opts.Ed*(opts.demand(stage+1,:)+...
-                Tree.value(nchild(l),:))'==0);
+            %const=const+(opts.E*U(:,i)+opts.Ed*(opts.demand(stage+1,:)+...
+            %    Tree.value(nchild(l),:))'==0);
         end
     end   
 end

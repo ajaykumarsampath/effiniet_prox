@@ -6,7 +6,8 @@ close all;
 clear all
 clc
 %%
-kk=3000;
+kk=5300;
+%load('dwn_big');
 load('dwn');
 P.Hp=24;
 P.Hu=23;
@@ -74,9 +75,6 @@ forbes_opts.Ed=S.Ed;
 apg_opts.E=S.E;
 apg_opts.Ed=S.Ed;
 
-apg_opts_mod.E=S.E(:,[1:3 5:6]);
-apg_opts_mod.Ed=S.Ed;
-
 [sys_null,V_null]=system_prox_formation_null(S,P,Tree,ops_sys);
 %% Calculate the particular solutions 
 par_sol_opt.demand=3600*DemandData(kk:kk+P.Hu,:);
@@ -85,8 +83,9 @@ prev_vhat=3600*sys_NN.L1*DemandData(kk-1,:)';
 par_sol_opt.prev_vhat=prev_vhat;
 %V.alpha=3600*(kron(ones(P.Hp,1),P.alpha1')+P.alpha2(kk:kk+P.Hu,:));
 V.alpha=(kron(ones(P.Hp,1),P.alpha1')+P.alpha2(kk:kk+P.Hu,:));
-current_state_opt=calcul_parti_soul(sys_NN,Tree,V,par_sol_opt);
-current_state_opt.v=3600*[0.0656 0.00 0.0849 0.0934]';
+current_state_opt=calParSol(sys_NN,Tree,V,par_sol_opt);
+current_state_opt.v=3600*rand(size(sys.L,2),1);
+%current_state_opt.v=3600*[0.0656 0.00 0.0849 0.0934]';
 
 %% Forbes algorithms 
 forbes_opts.x=0.1*(S.xmax-P.xs)+P.xs;
@@ -98,13 +97,13 @@ forbes_opts.uprev=sys.L*current_state_opt.v+prev_vhat;
 
 clear opt.opt_lbgfs;
 prob=formulate_forbes(sys_NN,V,Tree,forbes_opts);
-
+tolerance=1e-7;
 prob.x0=forbes_opts.x;
 opt_lbfgs.display = 1;
 opt_lbfgs.method = 'lbfgs';
 opt_lbfgs.variant='fast';
 opt_lbfgs.memory = 10;
-opt_lbfgs.tolOpt=1e-5;
+opt_lbfgs.tolOpt=tolerance;
 %
 tic;out_lbfg = forbes(prob,opt_lbfgs);toc
 
@@ -123,7 +122,7 @@ end
 
 opt.variant='fast';
 opt.method='fbs';
-opt.tolOpt=1e-5;
+opt.tolOpt=tolerance;
 tic;out = forbes(prob,opt);toc
 
 Z.X1=zeros(sys.nx,size(Tree.stage,1));
@@ -139,7 +138,7 @@ for i=1:size(Tree.stage,1)
 end
 %% APG algorithm 
 %sys=sys_NN;
-Ptree_NN=factor_apg_effiniet(sys_NN,V,Tree);
+Ptree_NN=factor_apg_effinet(sys_NN,V,Tree);
 opts_apg.state=current_state_opt;
 
 opts_apg.x=forbes_opts.x;
@@ -149,15 +148,15 @@ opts_apg.Ed=S.Ed;
 opts_apg.steps=out.iterations;
 opts_apg.lambda=8e-5;
 %opts_apg.lambda=2.1492e-05;
-[Z_NN,details_apg_NN]=APG_effiniet_2(sys_NN,Ptree_NN,Tree,V,opts_apg);
+[Z_NN,details_apg_NN]=APG_effinet_2(sys_NN,Ptree_NN,Tree,V,opts_apg);
 
 %% Forbes algorithms-Preconditioning
 
 %preconditioning 
-[DH_normalized_not,dts_not_normalized]=dual_hessian_calculate(sys_NN,Tree,V,apg_opts);
+[DH_nml,dts_not_normalized]=dual_hessian_calculate(sys_NN,Tree,V,apg_opts);
 
-sys_prcnd=precondition_calculate(sys_NN,DH_normalized_not,Tree);
-[DH_normalized_new,dts_normalized_new]=dual_hessian_calculate(sys_prcnd,Tree,V,apg_opts);
+sys_prcnd=precondition_calculate(sys_NN,DH_nml,Tree);
+[DH_nmd_prcnd,dts_normalized_new]=dual_hessian_calculate(sys_prcnd,Tree,V,apg_opts);
 
 clear opt opt_lbgfs;
 prob_prcnd=formulate_forbes(sys_prcnd,V,Tree,forbes_opts);
@@ -167,7 +166,7 @@ opt_lbfgs_pre.display = 1;
 opt_lbfgs_pre.method = 'lbfgs';
 opt_lbfgs_pre.variant='fast';
 opt_lbfgs_pre.memory = 10;
-opt_lbfgs_pre.tolOpt=1e-5;
+opt_lbfgs_pre.tolOpt=tolerance;
 %
 tic;out_lbfg_pre = forbes(prob_prcnd,opt_lbfgs_pre);toc
 
@@ -186,7 +185,7 @@ end
 
 opt.variant='fast';
 opt.method='fbs';
-opt.tolOpt=1e-5;
+opt.tolOpt=tolerance;
 tic;out_pre = forbes(prob_prcnd,opt);toc
 
 Z.X1_prcnd=zeros(sys.nx,size(Tree.stage,1));
@@ -202,7 +201,7 @@ for i=1:size(Tree.stage,1)
 end
 %% APG_preconditioned
 
-Ptree_prcnd=factor_apg_effiniet(sys_prcnd,V,Tree);
+Ptree_prcnd=factor_apg_effinet(sys_prcnd,V,Tree);
 opts_apg.state=current_state_opt;
 
 opts_apg.x=forbes_opts.x;
@@ -212,7 +211,7 @@ opts_apg.Ed=S.Ed;
 opts_apg.steps=out_pre.iterations;
 opts_apg.lambda=1e-2;
 %opts_apg.lambda=2.1492e-05;
-[Z_N,details_apg_N]=APG_effiniet_2(sys_prcnd,Ptree_prcnd,Tree,V,opts_apg);
+[Z_N,details_apg_N]=APG_effinet_2(sys_prcnd,Ptree_prcnd,Tree,V,opts_apg);
 %% Gurobi Algorithm 
 opts_apg.state=current_state_opt;
 opts_apg.x=forbes_opts.x;
@@ -222,9 +221,9 @@ apg_opts.E=S.E;
 apg_opts.Ed=S.Ed;
 apg_opts.demand=opts_apg.state.demand;
 
-effiniet_apg=effiniet_yalmip(sys_actual,Tree,V,apg_opts);
+effinet_apg=effinet_yalmip(sys_actual,Tree,V,apg_opts);
 tic
-[result,error]=effiniet_apg{{apg_opts.x,apg_opts.u}};
+[result,error]=effinet_apg{{apg_opts.x,apg_opts.u}};
 toc
 Z.eff_X=result{1,1};
 Z.eff_U=result{1,2};

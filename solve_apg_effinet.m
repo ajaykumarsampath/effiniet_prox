@@ -1,4 +1,4 @@
-function [ Z,details] = solve_apg_effiniet( sys,Tree,Ptree,Y,x,opts)
+function [ Z,details] = solve_apg_effinet( sys,Tree,Ptree,Y,x,opts)
 
 % This function performs the solve step for the DWNs problem 
 % 
@@ -32,13 +32,15 @@ sigma=zeros(nv,Nd+1);
 %sum_r=zeros(sys.nu,1);
 y=Y.y;
 yt=Y.yt;
+nyt=size(yt,1);
+
 nx=sys.nx;
 alpha_bar=opts.alpha_bar;
 
 
 for i=1:Ns
-    q(:,Tree.leaves(i)+1)=sys.F{Nd-Ns+1+i}(1:2*nx,:)'*yt(:,i);
-    r(:,Tree.leaves(i)+1)=Ptree.Gbar{Nd-Ns+1+i}(1:2*nx,:)'*yt(:,i);
+    q(:,Tree.leaves(i)+1)=sys.F{Nd-Ns+1+i}(1:nyt,:)'*yt(:,i);
+    r(:,Tree.leaves(i)+1)=Ptree.Gbar{Nd-Ns+1+i}(1:nyt,:)'*yt(:,i);
 end 
 
 for k=sys.Np-1:-1:0

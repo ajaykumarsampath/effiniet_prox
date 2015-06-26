@@ -1,4 +1,4 @@
-function [ sys,V] = system_prox_formation_box( S,P,Tree,ops_sys)
+function [ sys,V] = system_prox_modified_box( S,P,Tree,ops_sys)
 % This function transform the effiniet problem into
 % dual proximal gradient formulation.
 %
@@ -19,7 +19,8 @@ Ns=size(Tree.leaves,1);
 sys.xmin=P.xs;
 sys.xmax=S.xmax;
 
-sys.xs=P.beta*sys.xmax;
+%sys.xs=P.beta*sys.xmax;
+sys.xs=P.xs;
 
 sys.gamma_min=ops_sys.gamma_min;
 sys.gamma_xs=ops_sys.gamma_xs;
@@ -42,7 +43,7 @@ V.Wu=P.Wu;
 if(ops_sys.cell)
     sys.F=cell(Nd+1,1);
     sys.G=cell(Nd+1-Ns,1);
-    for j=1:Nd+1
+    for j=1:Nd+1+Ns
         sys.F{j}=[eye(S.nx);zeros(S.nu,S.nx)];
         sys.G{j}=[zeros(S.nx,S.nu);eye(S.nu);];
     end
@@ -53,8 +54,8 @@ end
 sys.cell=ops_sys.cell;
 sys.normalized=ops_sys.normalise;
 
-sys.umin=kron(ones(Nd-Ns+1,1),sys.umin);
-sys.umax=kron(ones(Nd-Ns+1,1),sys.umax);
+sys.umin=kron(ones(Nd,1),sys.umin);
+sys.umax=kron(ones(Nd,1),sys.umax);
 
 sys.xmin=kron(ones(Nd+1,1),sys.xmin);
 sys.xmax=kron(ones(Nd+1,1),sys.xmax);
@@ -63,4 +64,6 @@ sys.xs=kron(ones(Nd+1,1),sys.xs);
 
 %}
 end
+
+
 

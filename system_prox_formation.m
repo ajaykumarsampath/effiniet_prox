@@ -17,6 +17,7 @@ Ns=size(Tree.leaves,1);
 %sys.G=[S.B;eye(S.nu)];
 
 sys.xmin=P.xs;
+%sys.xmin=S.xmin;
 sys.xmax=S.xmax;
 
 sys.xs=P.beta*sys.xmax;
