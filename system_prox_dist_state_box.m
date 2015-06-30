@@ -1,4 +1,4 @@
-function [ sys,V] = system_prox_modif_state_box( S,P,Tree,ops_sys)
+function [ sys,V] = system_prox_dist_state_box( S,P,Tree,ops_sys)
 % This function transform the effiniet problem into
 % dual proximal gradient formulation.
 %
@@ -13,8 +13,6 @@ sys.nx=S.nx;
 sys.Np=P.Hp;
 Nd=size(Tree.stage,1);
 Ns=size(Tree.leaves,1);
-%sys.F=[S.A;zeros(S.nu,S.nx)];
-%sys.G=[S.B;eye(S.nu)];
 
 sys.xmin=P.xs;
 sys.xmax=S.xmax;
@@ -43,11 +41,11 @@ if(ops_sys.cell)
     sys.F=cell(Nd+1,1);
     sys.G=cell(Nd+1-Ns,1);
     for j=1:Nd
-        sys.F{j}=eye(S.nx);
+        sys.F{j}=[eye(S.nx);eye(S.nx)];
         sys.G{j}=eye(S.nu);
     end
 else
-    sys.F=eye(S.nx);
+    sys.F=[eye(S.nx);eye(S.nx)];
     sys.G=eye(S.nu);
 end
 sys.cell=ops_sys.cell;

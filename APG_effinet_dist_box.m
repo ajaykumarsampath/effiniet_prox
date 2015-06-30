@@ -1,4 +1,4 @@
-function [ Z,details] = APG_effinet_box_modified(sys_box,Ptree_box,Tree,V,opts)
+function [ Z,details] = APG_effinet_dist_box(sys_box,Ptree_box,Tree,V,opts)
 
 % This function is implements the APG algorithm to solve the sc-mpc of
 % effinet problem with soft constraints on state and hard constraits
@@ -16,6 +16,7 @@ function [ Z,details] = APG_effinet_box_modified(sys_box,Ptree_box,Tree,V,opts)
 Ns=length(Tree.leaves);% total scenarios in the tree
 Nd=length(Tree.stage);%toal nodes in the tree
 % Initalizing the dual varibables
+
 ny_x=size(sys_box.F{1},1);
 ny_u=size(sys_box.G{1},1);
 
@@ -28,13 +29,9 @@ W.u=zeros(ny_u,Nd);
 
 epsilon_prm=1;
 
-prm_fes.soft=zeros(ny_x,Nd);
-prm_fes.hard=zeros(ny_u,Nd);
-
 theta=[1 1]';
 
 details.term_crit=zeros(1,4);
-dual_grad=prm_fes;
 
 opts_prox.lambda=opts.lambda;
 opts_prox.xmin=reshape(sys_box.xmin,sys_box.nx,Nd);
@@ -45,8 +42,8 @@ opts_prox.umin=reshape(sys_box.umin,sys_box.nu,Nd);
 opts_prox.umax=reshape(sys_box.umax,sys_box.nu,Nd);
 opts_prox.nx=sys_box.nx;
 opts_prox.nu=sys_box.nu;
-opts_prox.gamma_xbox=sys_box.gamma_xbox;
-opts_prox.gamma_xs=sys_box.gamma_xs;
+opts_prox.gamma_xbox=sys_box.gamma_xbox/opts.lambda;
+opts_prox.gamma_xs=sys_box.gamma_xs/opts.lambda;
 opts_prox.iter=200;
 opts_prox.constraints=opts.constraints;
 
@@ -55,18 +52,6 @@ uprev=sys_box.L*opts.state.v+opts.state.prev_vhat;
 prm_feas.x=zeros(ny_x,Nd);
 prm_feas.u=zeros(ny_u,Nd);
 
-%g1=[sys.xmax(1:sys.nx);-sys.xmin(1:sys.nx);sys.umax(1:sys.nu);sys.umin(1:sys.nu)];
-%{
-grad_opts.u=uprev;
-grad_opts.x=opts.x;
-grad_opts.E=opts.E;
-grad_opts.Ed=opts.Ed;
-grad_opts.demand=opts.state.demand;
-%V.Wu=100*eye(sys.nu);
-dual_grad_yalmip=dual_gradient_yalmip(sys,Tree,V,grad_opts);
-
-
-%}
 %%
 %tic
 j=1;
@@ -79,7 +64,7 @@ while(j<opts.steps)
     
     %step 2: argmin of the lagrangian using dynamic programming
     %}
-    Z=solve_apg_eff_modif_state(sys_box,Tree,Ptree_box,W,opts.x,opts.state);
+    Z=solve_apg_eff_dist_state(sys_box,Tree,Ptree_box,W,opts.x,opts.state);
     
     %
     for i=1:Nd-Ns+1
@@ -98,15 +83,14 @@ while(j<opts.steps)
             end
         end
     end
-    %}
-    %{
-    [results,error]=dual_grad_yalmip{{grad_opts.x,grad_opts.u,W.y,W.yt}};
-    Z.X=results{1,1};
-    Z.U=results{1,2};
-    jobj(j)=results{1,3};
-    %}
+    
     %step 3: proximal with respect to g
-    t=prox_effinet_modif_state_box(Z,W,sys_box,Tree,opts_prox);
+    if(strcmp(opts.distance,'yes'))
+        t=prox_effinet_dist_box(Z,W,sys_box,Tree,opts_prox);
+    else
+        t=prox_effinet_modif_state_box(Z,W,sys_box,Tree,opts_prox);
+    end
+    
     
     %step 4: update the dual vector
     Y.x0=Y.x1;
@@ -120,10 +104,8 @@ while(j<opts.steps)
             prm_feas.u(:,i)=sys_box.G{i,1}*Z.U(:,i)-t.u(:,i);
         end
     else
-        Y.y1(1:sys_box.nx,2:Nd)=W.y(1:sys_box.nx,2:Nd)+opts.lambda*...
-            (sys_box.F(1:sys_box.nx,:)*Z.X(:,2:Nd)-t.x);
-        Y.y1(sys_box.nx+1:end,:)=W.y(sys_box.nx+1:end,:)+opts.lambda*...
-            (sys_box.G(sys_box.nx+1:end,:)*Z.U-t.u);
+        Y.x1=W.x+opts.lambda*(sys_box.F*Z.X(:,2:Nd)-t.x);
+        Y.u1=W.u+opts.lambda*(sys_box.G(sys_box.nx+1:end,:)*Z.U-t.u);
     end
     
     iter=j;

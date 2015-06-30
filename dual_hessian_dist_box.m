@@ -1,4 +1,4 @@
-function [ Dual_hessian,details] = dual_hessian_modfy_box( sys,Tree,V,apg_opts)
+function [ Dual_hessian,details] = dual_hessian_dist_box( sys,Tree,V,apg_opts)
 % This function calculate the dual hessian for the effiniet problem
 %
 % INPUT ----    sys      :
@@ -19,7 +19,6 @@ nz1=2*nx+nu;
 %Np=sys.Np;
 Bbar=zeros(Np*(nx+ne),Np*nz);
 H=zeros(nz*Np);
-ny=size(sys.F{1},1);
 A=zeros(Np*nz,Np*nz);
 epsilon=0e-4*eye(nz);
 
@@ -60,13 +59,11 @@ Wbar=L'*H*L;
 
 if(sys.cell)
     for i=1:Np
-        A((i-1)*nz+1:i*nz,(i-1)*nz+1:i*nz)=blkdiag(sys.G{i},...
-            sys.F{i});
+        A((i-1)*nz1+1:i*nz1,(i-1)*nz+1:i*nz)=blkdiag(sys.G{i},sys.F{i});
     end
 else
     for i=1:Np
-        A((i-1)*nz+1:i*nz,(i-1)*nz+1:i*nz)=blkdiag(sys.G,...
-            sys.F);
+        A((i-1)*nz+1:i*nz,(i-1)*nz+1:i*nz)=blkdiag(sys.G,sys.F);
     end
 end
 

@@ -2,7 +2,7 @@ close all;
 clear all
 clc
 %%
-kk=4875;
+kk=3875;
 load('dwn');
 P.Hp=24;
 P.Hu=23;
@@ -10,7 +10,7 @@ P.beta=0.1;
 Dd = DemandData(:,1); % My data
 % Define data
 tree_ops.Tmax = 800; % time steps for which data are available
-tree_ops.nScen = 500; % no. of scenarios
+tree_ops.nScen = 200; % no. of scenarios
 tree_ops.N = 23; % prediction
 
 load ('svm_error.mat');
@@ -34,7 +34,7 @@ end
 %Demand_ratio=36*Demand_ratio;
 %% scenario tree generation
 tree_ops.ni = ones(tree_ops.N,1); % max number of desired scenarios for each time stage
-branching_factor = [10 5 2 2];
+branching_factor = [5 2 2 1];
 tree_ops.ni(1:length(branching_factor)) = branching_factor;
 tree_ops.Wscaling = 1; % 1/0: do/don't scale disturbance W
 tree_ops.Wfiltering = 0; % 1/0 do/don't filter disturbance W by system dynamics and u=Kx
@@ -53,52 +53,39 @@ ops_sys.gamma_xs=inf;
 ops_sys.gamma_xbox=inf;
 ops_sys.normalise=0;
 ops_sys.cell=0;
-sys_actual=system_prox_modif_state_box(S,P,Tree,ops_sys);
+sys_actual=system_prox_dist_state_box(S,P,Tree,ops_sys);
 ops_sys.cell=1;
 ops_sys_poly=0;
-sys_NN=system_prox_modif_state_box(S,P,Tree,ops_sys);
+
+sys_box_dist=system_prox_dist_state_box(S,P,Tree,ops_sys);
 
 [sys_box,V]=system_prox_modif_state_box(S,P,Tree,ops_sys);
+
 %V.Wu=V.Wu/3600;
 apg_opts.E=S.E;
 apg_opts.Ed=S.Ed;
 apg_opts.exact_prcnd=0;
 %% Particular solution calculation
 par_sol_opt.demand=3600*DemandData(kk:kk+P.Hu,:);
-prev_vhat=3600*sys_box.L1*DemandData(kk-1,:)';
+prev_vhat=3600*sys_box_dist.L1*DemandData(kk-1,:)';
 
 par_sol_opt.prev_vhat=prev_vhat;
 %V.alpha=3600*(kron(ones(P.Hp,1),P.alpha1')+P.alpha2(kk:kk+P.Hu,:));
 V.alpha=(kron(ones(P.Hp,1),P.alpha1')+P.alpha2(kk:kk+P.Hu,:));
-current_state_opt=calParSol_modified(sys_box,Tree,V,par_sol_opt);
+current_state_opt=calParSol_modified(sys_box_dist,Tree,V,par_sol_opt);
 current_state_opt.v=3600*[0.0656 0.00 0.0849 0.0934]';
 %% Preconditioning 
 opts_prcnd.dual_hessian=1;
 opts_prcnd.prcnd=0;
-if(Nscenarios==1)
-    [DH_nml,dts_nml]=dual_hessian_calculate_box(sys_box,Tree,V,apg_opts);
-    sys_prcnd_act=precondition_calculate_box(sys_box,DH_nml,Tree);
-    [DH_nml_prcnd,dts_nml_prcnd]=dual_hessian_calculate_box(sys_prcnd_act,Tree,V,apg_opts);
-    l=eig(DH_nml_prcnd);
-end
+
+[sys_prcnd_dist,dts_prcnd_dist]=prcnd_sys_dist_box(sys_box_dist,Tree,V,apg_opts);
 [sys_prcnd,dts_prcnd]=prcnd_sys_modfy_box(sys_box,Tree,V,apg_opts);
 
-%apg_opts.exact_prcnd=1;
-%[sys_ext_prcnd,dts_exct_prcnd]=prcnd_sys_modfy_box(sys_box,Tree,V,apg_opts);
 
 %% Factor step
 
-Ptree_box=factor_apg_eff_modif_state(sys_box,V,Tree);
-%Ptree=factor_apg_effinet(sys_box,V,Tree);
+Ptree_prcnd_dist=factor_apg_eff_dist_state(sys_prcnd_dist,V,Tree);
 Ptree_prcnd=factor_apg_eff_modif_state(sys_prcnd,V,Tree);
-if(apg_opts.exact_prcnd)
-    Ptree_exct_prcnd=factor_apg_eff_modif_state(sys_ext_prcnd,V,Tree);
-end
-
-if(Nscenarios==1)
-    Ptree_prcnd_act=factor_apg_eff_modif_state(sys_prcnd_act,V,Tree);
-end
-
 %% Solve steps  
 % solve step options 
 opts_apg.state=current_state_opt;
@@ -107,30 +94,18 @@ opts_apg.x=0.5*(S.xmax-P.xs)+P.xs;
 opts_apg.E=S.E;
 opts_apg.Ed=S.Ed;
 opts_apg.constraints='soft';
+tic
+opts_apg.steps=200;
+opts_apg.lambda=1.3*1/dts_prcnd_dist.norm;
+[Z_prcnd_dist,details_apg_prcnd_dist]=APG_effinet_dist_box(sys_prcnd_dist,Ptree_prcnd_dist,Tree,V,opts_apg);
+toc
 
-
-if(opts_prcnd.prcnd)
-    opts_apg.steps=1000;
-    opts_apg.lambda=0.08*1/dts_prcnd.norm_act;
-    %opts_apg.lambda=2.1492e-05;
-    [Z_box,details_apg_box]=APG_effinet_box_modified(sys_box,Ptree_box,Tree,V,opts_apg);
-end
-
-opts_apg.steps=300;
+tic
+opts_apg.constraints='soft';
+opts_apg.steps=200;
 opts_apg.lambda=1.3*1/dts_prcnd.norm;
 [Z_prcnd,details_apg_prcnd]=APG_effinet_box_modified(sys_prcnd,Ptree_prcnd,Tree,V,opts_apg);
-
-if(apg_opts.exact_prcnd)
-    opts_apg.lambda=1/dts_exct_prcnd.norm;
-    [Z_exct_prcnd,details_apg_ext_prcnd]=APG_effinet_box_modified(sys_prcnd,Ptree_prcnd,Tree,V,opts_apg);
-end
-
-if(Nscenarios==1)
-    opts_apg.steps=1000;
-    opts_apg.lambda=1/dts_prcnd.norm;
-    [Z_prcnd_act,details_apg_prcnd_act]=APG_effinet_box_modified(sys_prcnd_act,...
-        Ptree_prcnd_act,Tree,V,opts_apg);
-end
+toc
 %% Gurobi Algorithm 
 apg_opts.u=sys_actual.L*opts_apg.state.v+opts_apg.state.prev_vhat;
 apg_opts.x=opts_apg.x;
@@ -145,107 +120,46 @@ toc
 Z.X=result{1,1};
 Z.U=result{1,2};
 %% check the equality constraints 
-if(opts_prcnd.prcnd)
-    eq_const=control_demand_equation(Z_box,Tree,apg_opts);
-end
-eq_const_pre=control_demand_equation(Z_prcnd,Tree,apg_opts);
+
+eq_const_box=control_demand_equation(Z_prcnd,Tree,apg_opts);
+eq_const_dist=control_demand_equation(Z_prcnd_dist,Tree,apg_opts);
 eq_const_yalmip=control_demand_equation(Z,Tree,apg_opts);
 
 %SI=scenario_index(Tree);
 figure
-if(opts_prcnd.prcnd)
-    plot(max(abs(eq_const)))
-end
+plot(max(abs(eq_const_dist)))
 hold all;
-plot(max(abs(eq_const_pre)))
+plot(max(abs(eq_const_box)))
 plot(max(abs(eq_const_yalmip)))
-if(opts_prcnd.prcnd)
-    legend('APG','APG-diag','gurobi')
-else
-    legend('APG-diag','gurobi')
-end
+legend('APG-dist','APG-box','gurobi')
 
 figure
 for i=1:sys_actual.nx
     subplot(3,1,i)
-    if(opts_prcnd.prcnd)
-        plot(Z_box.X(i,:));
-    end     
+    plot(Z_prcnd_dist.X(i,:));
     hold all;
     plot(Z_prcnd.X(i,:))
-    if(apg_opts.exact_prcnd)
-        plot(Z_exct_prcnd.X(i,:))
-    end
     plot(Z.X(i,:));
     plot(S.xmax(i)*ones(Nstage,1));
     plot(S.xmin(i)*ones(Nstage,1));
-    if(Nscenarios==1)
-        plot(Z_prcnd_act.X(i,:))
-    end
+    legend('APG-dist','APG-box','gurobi')
 end
-if(Nscenarios==1)
-    legend('APG','APG-diag','gurobi','APG-EXACT')
-else
-    if(opts_prcnd.prcnd)
-        legend('APG','APG-diag','gurobi')
-    else
-        if(apg_opts.exact_prcnd)
-            legend('APG-diag','APG-exact','gurobi')
-        else
-            legend('APG-diag','gurobi')
-        end
-    end
-end
+
 figure
 for i=1:sys_actual.nu
     subplot(3,2,i)
-    %}
-    if(opts_prcnd.prcnd)
-        plot(Z_box.U(i,:));
-    end
+    
+    plot(Z_prcnd_dist.U(i,:));
     hold all;
     plot(Z_prcnd.U(i,:))
-    if(apg_opts.exact_prcnd)
-        plot(Z_exct_prcnd.U(i,:))
-    end
     plot(Z.U(i,:));
-    %}
     plot(3600*S.umin(i)*ones(Nstage,1));
+    legend('APG-dist','APG-box','gurobi')
     %plot(3600*S.umax(i)*ones(Nstage,1));
-    if(Nscenarios==1)
-        plot(Z_prcnd_act.U(i,:));
-    end
-end
-if(Nscenarios==1)
-    legend('APG','APG-diag','gurobi','APG-EXACT')
-else
-    if(opts_prcnd.prcnd)
-        legend('APG','APG-diag','gurobi')
-    else
-        if(apg_opts.exact_prcnd)
-            legend('APG-diag','APG-exact','gurobi')
-        else
-            legend('APG-diag','gurobi')
-        end
-    end
 end
 %%
 figure
-if(opts_prcnd.prcnd)
-    plot(details_apg_box.jobj)
-end
+plot(details_apg_prcnd_dist.jobj);
 hold all;
 plot(details_apg_prcnd.jobj)
-if(apg_opts.exact_prcnd)
-    plot(details_apg_ext_prcnd.jobj);
-end
-if(Nscenarios==1)
-    plot(details_apg_prcnd_act.jobj)
-    legend('APG','APG-diag','APG-EXACT')
-else
-    if(apg_opts.exact_prcnd)
-        legend('APG-diag','APG-exact','gurobi')
-    else
-        legend('APG-diag','gurobi')
-    end
-end
+legend('APG-dist','APG-box')

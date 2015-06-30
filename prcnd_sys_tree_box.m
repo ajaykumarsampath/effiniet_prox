@@ -63,7 +63,10 @@ for k=1:Np+1
         sys_new.G{k,1}(nx+1:end,:)=DH_diag(1:nu,1:nu)*sys_box.G{k,1}(nx+1:end,:);
         sys_new.umax(1:nu,1)=DH_diag(1:nu,1:nu)*sys_box.umax(1:nu,1);
         sys_new.umin(1:nu,1)=DH_diag(1:nu,1:nu)*sys_box.umin(1:nu,1);
-    
+    par_sol_opt.demand=3600*DemandData(kk:kk+P.Hu,:);
+prev_vhat=3600*sys_box.L1*DemandData(kk-1,:)';
+
+par_sol_opt.prev_vhat=prev_vhat;
     elseif(k==Np+1)
         
         nodes_stage=Tree.leaves;

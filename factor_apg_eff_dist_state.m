@@ -1,4 +1,4 @@
-function [ Ptree] = factor_apg_eff_modif_state( sys,V,Tree)
+function [ Ptree] = factor_apg_eff_dist_state( sys,V,Tree)
 
 % This function calculate the matrices factor step of the effiniet
 % cost function.
@@ -10,7 +10,7 @@ Wv=sys.L'*V.Wu*sys.L;
 nv=size(sys.L,2); %reduced variable
 
 if(sys.cell)
-   
+    %Gbar=sys.G*sys.L;
     Bbar=sys.B*sys.L;
     
     for k=sys.Np:-1:1

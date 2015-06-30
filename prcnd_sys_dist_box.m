@@ -1,4 +1,4 @@
-function [ sys_new,details] = prcnd_sys_modfy_box(sys_box,Tree,V,apg_opts)
+function [ sys_new,details] = prcnd_sys_dist_box(sys_box,Tree,V,apg_opts)
 
 % This function preconditions the system with scenario trees.
 %
@@ -12,9 +12,8 @@ function [ sys_new,details] = prcnd_sys_modfy_box(sys_box,Tree,V,apg_opts)
 %%
 nx=sys_box.nx;
 nu=sys_box.nu;
-nz=nx+nu;
+nz=2*nx+nu;
 Nd=size(Tree.stage,1);
-%Ns=size(Tree.leaves,1);
 Np=sys_box.Np;
 
 sys_temp.A=sys_box.A;
@@ -40,8 +39,9 @@ sys_temp.umax=kron(ones(Np,1),sys_box.umax(1:nu,1));
 
 sys_temp.xmin=kron(ones(Np,1),sys_box.xmin(1:nx,1));
 sys_temp.xmax=kron(ones(Np,1),sys_box.xmax(1:nx,1));
+sys_temp.xs=kron(ones(Np,1),sys_box.xs(1:nx,1));
 
-[DH_nml,dts_nml]=dual_hessian_modfy_box(sys_temp,Tree_new,V,apg_opts);
+[DH_nml,dts_nml]=dual_hessian_dist_box(sys_temp,Tree_new,V,apg_opts);
 details.norm_act=dts_nml.norm;
 
 if(apg_opts.exact_prcnd)
@@ -67,13 +67,14 @@ if(apg_opts.exact_prcnd)
         sys_new.xs((j-1)*nx+1:j*nx,1)=prob(j)*details.pre_cnd.Ef1*sys_box.xs((j-1)*nx+1:j*nx,1);
     end
 else
-    sys_prcnd=prcnd_diag_modfy_box(sys_temp,DH_nml);
+    sys_prcnd=prcnd_diag_dist_box(sys_temp,DH_nml);
     
-    [DH_nml_prcnd,dts_nml_prcnd]=dual_hessian_modfy_box(sys_prcnd,Tree_new,V,apg_opts);
+    [DH_nml_prcnd,dts_nml_prcnd]=dual_hessian_dist_box(sys_prcnd,Tree_new,V,apg_opts);
     details.norm=dts_nml_prcnd.norm;
     
     DH_diag=diag(diag(DH_nml).^(-0.5));
     prob=sqrt(Tree.prob);
+    %prob=ones(Nd,1);
     sys_new=sys_box;
     
     for j=1:Nd
@@ -91,11 +92,11 @@ else
         
         sys_new.F{j,1}=prob(j)*DH_diag((k-1)*nz+nu+1:k*nz,(k-1)*nz+nu+1:k*nz)*...
             sys_box.F{j,1};
-        sys_new.xmax((j-1)*nx+1:j*nx,1)=prob(j)*DH_diag((k-1)*nz+nu+1:k*nz,(k-1)*nz+nu+1:k*nz)*...
-            sys_box.xmax((j-1)*nx+1:j*nx,1);
-        sys_new.xmin((j-1)*nx+1:j*nx,1)=prob(j)*DH_diag((k-1)*nz+nu+1:k*nz,(k-1)*nz+nu+1:k*nz)*...
-            sys_box.xmin((j-1)*nx+1:j*nx,1);
-        sys_new.xs((j-1)*nx+1:j*nx,1)=prob(j)*DH_diag((k-1)*nz+nu+1:k*nz,(k-1)*nz+nu+1:k*nz)*...
+        sys_new.xmax((j-1)*nx+1:j*nx,1)=prob(j)*DH_diag((k-1)*nz+nu+1:(k-1)*nz+nu+nx,...
+            (k-1)*nz+nu+1:(k-1)*nz+nu+nx)*sys_box.xmax((j-1)*nx+1:j*nx,1);
+        sys_new.xmin((j-1)*nx+1:j*nx,1)=prob(j)*DH_diag((k-1)*nz+nu+1:(k-1)*nz+nu+nx,...
+            (k-1)*nz+nu+1:(k-1)*nz+nu+nx)*sys_box.xmin((j-1)*nx+1:j*nx,1);
+        sys_new.xs((j-1)*nx+1:j*nx,1)=prob(j)*DH_diag((k-1)*nz+nu+nx+1:k*nz,(k-1)*nz+nu+nx+1:k*nz)*...
             sys_box.xs((j-1)*nx+1:j*nx,1);
     end
 end

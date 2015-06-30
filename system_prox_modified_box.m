@@ -14,7 +14,6 @@ sys.Np=P.Hp;
 Nd=size(Tree.stage,1);
 Ns=size(Tree.leaves,1);
 %sys.F=[S.A;zeros(S.nu,S.nx)];
-%sys.G=[S.B;eye(S.nu)];
 
 sys.xmin=P.xs;
 sys.xmax=S.xmax;

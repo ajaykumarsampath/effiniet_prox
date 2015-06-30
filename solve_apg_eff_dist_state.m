@@ -1,4 +1,4 @@
-function [ Z,details] = solve_apg_eff_modif_state( sys_box,Tree,Ptree_box,Y,x,opts)
+function [ Z,details] = solve_apg_eff_dist_state( sys_box,Tree,Ptree_box,Y,x,opts)
 % This function performs the solve step for the DWNs problem 
 % 
 % INPUT-----   sys     :  system dynamics 
@@ -31,7 +31,7 @@ sigma=zeros(nv,Nd+1);
 %sum_r=zeros(sys.nu,1);
 
 for k=sys_box.Np:-1:1
-     nodes_stage=find(Tree.stage==k-1);
+    nodes_stage=find(Tree.stage==k-1);
     if(k==1)
         sigma(:,1)=r(:,2)+opts.beta(:,1);
         v(:,1)=Ptree_box.Phi{1}*Y.x(:,1)+Ptree_box.Psi{1}*Y.u(:,1)+...
@@ -70,7 +70,7 @@ for k=sys_box.Np:-1:1
                 end
             end
         end
-    end  
+    end 
 end
 
 Z.X(:,1)=x;
@@ -93,6 +93,8 @@ end
 
 details.q=q;
 end
+
+
 
 
 

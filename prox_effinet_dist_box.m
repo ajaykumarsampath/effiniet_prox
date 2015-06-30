@@ -1,4 +1,4 @@
-function [ t ] = prox_effinet_modif_state_box(Z,W,sys,Tree,opts_prox)
+function [ t ] = prox_effinet_dist_box(Z,W,sys,Tree,opts_prox)
 % This function calcualte the proximal for the state and input constraints
 % soft constraits on state,
 % hard constraints on input.
@@ -8,7 +8,7 @@ function [ t ] = prox_effinet_modif_state_box(Z,W,sys,Tree,opts_prox)
 %      opts_prox   :  proximal options.
 %%
 
-
+distance=[0;0];
 if(sys.cell)
     constraints.x=W.x/opts_prox.lambda;
     constraints.u=W.u/opts_prox.lambda;
@@ -18,11 +18,9 @@ if(sys.cell)
     for i=1:Nd
         constraints.x(:,i)=constraints.x(:,i)+sys.F{i,1}*Z.X(:,i+1);
         constraints.u(:,i)=constraints.u(:,i)+sys.G{i,1}*Z.U(:,i);
-    end 
+    end
     
-    opts_prox.xmax=reshape(opts_prox.xmax,sys.nx,size(constraints.x,2));
-    opts_prox.xmin=reshape(opts_prox.xmin,sys.nx,size(constraints.x,2));
-    opts_prox.xs=reshape(opts_prox.xs,sys.nx,size(constraints.x,2));
+    
     % hard constraints on input u
     t.u=zeros(sys.nu,size(constraints.u,2));
     t.u=min(opts_prox.umax,constraints.u(1:sys.nu,:));
@@ -30,14 +28,41 @@ if(sys.cell)
     
     % soft constraints on input x
     if(strcmp(opts_prox.constraints,'soft'))
-          xtemp=reshape(constraints.x,sys.nx*Nd,1);
-          %t.x=proximal_state_admm(xtemp,opts_prox);
-          t.x=proximal_effinet_state(xtemp,opts_prox);
-          t.x=reshape(t.x,sys.nx,Nd);
-    else 
-          t.x=zeros(sys.nx,size(constraints.x,2));
-          t.x=min(opts_prox.xmax,constraints.x(1:sys.nx,:));
-          t.x=max(opts_prox.xmin,t.x);
+        opts_prox.xmax=reshape(opts_prox.xmax,sys.nx*size(constraints.x,2),1);
+        opts_prox.xmin=reshape(opts_prox.xmin,sys.nx*size(constraints.x,2),1);
+        opts_prox.xs=reshape(opts_prox.xs,sys.nx*size(constraints.x,2),1);
+        
+        t.x=zeros(2*sys.nx,size(constraints.x,2));
+        xtemp=reshape(constraints.x(1:sys.nx,:),sys.nx*Nd,1);
+        
+        ProjSet1=min(opts_prox.xmax,xtemp);
+        ProjSet1=max(opts_prox.xmin,ProjSet1);
+        
+        distance(1)=norm(xtemp-ProjSet1,2);
+        if(distance(1)>opts_prox.gamma_xbox)
+            xtemp=xtemp+opts_prox.xbox*(ProjSet1-xtemp)/distance(1);
+        else
+            xtemp=ProjSet1;
+        end
+        
+        t.x(1:sys.nx,:)=reshape(xtemp,sys.nx,Nd);
+        xtemp=reshape(constraints.x(sys.nx+1:2*sys.nx,:),sys.nx*Nd,1);
+        
+        %ProjSet2=min(opts_prox.xmax,xtemp);
+        ProjSet2=max(opts_prox.xs,xtemp);
+        
+        distance(2)=norm(xtemp-ProjSet2,2);
+        if(distance(2)>opts_prox.gamma_xs)
+            xtemp=xtemp+opts_prox.xs*(ProjSet2-xtemp)/distance(2);
+        else
+            xtemp=ProjSet2;
+        end
+        
+        t.x(sys.nx+1:2*sys.nx,:)=reshape(xtemp,sys.nx,Nd);
+    else
+        t.x=zeros(2*sys.nx,size(constraints.x,2));
+        t.x=min(opts_prox.xmax,constraints.x(1:sys.nx,:));
+        t.x=max(opts_prox.xmin,t.x);
     end
     %max(max(abs(t.x-t1.x)))
 else

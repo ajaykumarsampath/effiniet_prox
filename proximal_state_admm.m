@@ -63,7 +63,7 @@ if(i==opts_prox.iter)
 end
 z2=min(opts_prox.xmax,x);
 z2=max(opts_prox.xmin,z2);
-%max(max(abs(z(:,2)-z2)))
+max(max(abs(z(:,2)-z2)))
 details.tolerance=max(abs(t));
 prox=z(:,1);
 end

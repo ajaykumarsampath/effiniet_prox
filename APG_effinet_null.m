@@ -1,4 +1,4 @@
-function [ Z_null,details] = APG_effiniet_null(sys_null,Ptree_null,Tree,V,opts)
+function [ Z_null,details] = APG_effinet_null(sys_null,Ptree_null,Tree,V,opts)
 
 % This function is implements the APG algorithm to solve the sc-mpc of
 % effinet problem with soft constraints on state and hard constraits
