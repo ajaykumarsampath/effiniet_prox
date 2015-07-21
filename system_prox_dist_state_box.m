@@ -14,11 +14,10 @@ sys.Np=P.Hp;
 Nd=size(Tree.stage,1);
 Ns=size(Tree.leaves,1);
 
-sys.xmin=P.xs;
+sys.xmin=S.xmin;
 sys.xmax=S.xmax;
-sys.beta=P.beta;
-%sys.xs=P.beta*sys.xmax;
-sys.xs=sys.xmin;
+sys.xs=P.xs;
+%sys.xs=sys.xmin;
 
 sys.gamma_xbox=ops_sys.gamma_xbox;
 sys.gamma_xs=ops_sys.gamma_xs;

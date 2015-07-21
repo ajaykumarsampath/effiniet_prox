@@ -10,12 +10,14 @@ Wv=sys.L'*V.Wu*sys.L;
 nv=size(sys.L,2); %reduced variable
 
 if(sys.cell)
-   
+    
     Bbar=sys.B*sys.L;
     
     for k=sys.Np:-1:1
         nodes_stage=find(Tree.stage==k-1);
         for j=1:length(nodes_stage)
+            Wv_k=Tree.prob(nodes_stage(j))*Wv;
+            %{
             if(k==sys.Np)
                 Wv_k=Tree.prob(nodes_stage(j))*Wv;
             else
@@ -25,6 +27,7 @@ if(sys.cell)
                     Wv_k=Wv_k+Tree.prob(nchild(l))*Wv;
                 end
             end
+            %}
             Ptree.Gbar{nodes_stage(j),1}=sys.G{nodes_stage(j),1}*sys.L;
             
             Ptree.omega{nodes_stage(j),1}=-0.5*(Wv_k\eye(nv));
@@ -34,16 +37,27 @@ if(sys.cell)
                 Ptree.Gbar{nodes_stage(j)}';
             Ptree.Theta{nodes_stage(j),1}=Ptree.omega{nodes_stage(j),1}*Bbar';
             
-            Ptree.K{nodes_stage(j),1}=-2*Tree.prob(nodes_stage(j))*...
-                (Ptree.omega{nodes_stage(j),1}*Wv);
+            %Ptree.K{nodes_stage(j),1}=-2*Tree.prob(nodes_stage(j))*...
+            %(Ptree.omega{nodes_stage(j),1}*Wv);
+            Ptree.K{nodes_stage(j),1}=eye(nv);
             
             Ptree.d{nodes_stage(j),1}=Ptree.K{nodes_stage(j),1}'*...
                 (sys.F{nodes_stage(j)}*Bbar)';
             Ptree.f{nodes_stage(j),1}=Ptree.K{nodes_stage(j),1}'*...
                 Ptree.Gbar{nodes_stage(j)}';
-            Ptree.g{nodes_stage(j),1}=Ptree.K{nodes_stage(j),1}'*Bbar';   
+            Ptree.g{nodes_stage(j),1}=Ptree.K{nodes_stage(j),1}'*Bbar';
         end
-        
+        %
+        if(k==1)
+            Ptree.P{1}=-Wv;
+        else
+            Pnodes_stage=find(Tree.stage==k-2);
+            for j=1:length(Pnodes_stage)
+                nchild=Tree.children{Pnodes_stage(j)};
+                Ptree.P{Pnodes_stage(j)+1,1}=-sum(Tree.prob(nchild))*Wv;
+            end
+        end
+        %{
         if(k==1)
             Ptree.P{1}=-Wv*Ptree.K{1};
         else
@@ -57,18 +71,19 @@ if(sys.cell)
                         Ptree.P{Pnodes_stage(j)+1,1}=Ptree.P{Pnodes_stage(j)+1,1}+...
                             Tree.prob(nchild(l))*Ptree.K{nchild(l),1};
                     end
-                end 
+                end
                 Ptree.P{Pnodes_stage(j)+1,1}=-Wv*Ptree.P{Pnodes_stage(j)+1,1};
             end
-        end 
+        end
+        %}
     end
     Ptree.Bbar=sys.B*sys.L;
 else
     Gbar=sys.G*sys.L;
     Bbar=sys.B*sys.L;
     Fbar=sys.F*Bbar;
-     
-   for k=sys.Np:-1:1
+    
+    for k=sys.Np:-1:1
         nodes_stage=find(Tree.stage==k-1);
         for j=1:length(nodes_stage)
             if(k==sys.Np)
@@ -101,10 +116,10 @@ else
                         Ptree.P{Pnodes_stage(j)+1,1}=Ptree.P{Pnodes_stage(j)+1,1}+...
                             Tree.prob(nchild(l))*Ptree.K{nchild(l),1};
                     end
-                end 
+                end
                 Ptree.P{Pnodes_stage(j)+1,1}=-Wv*Ptree.P{Pnodes_stage(j)+1,1};
             end
-        end 
+        end
     end
     Ptree.Bbar=Bbar;
     Ptree.Gbar=Gbar;
